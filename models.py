@@ -32,11 +32,10 @@ class PatchEmbed(nn.Cell):
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def construct(self, x):
-#         stxx()
         x = self.proj(x)
         B, C, H, W = x.shape        
         if self.flatten:
-#             x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
+
             x = ops.reshape(x, (B,C, H * W))
             x = ops.transpose(x, (0, 2, 1))
         x = self.norm(x)
@@ -110,10 +109,6 @@ def drop_block_2d(
         else:
             x = x * block_mask * normalize_scale
     return x
-
-
-
-
 
 # def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: bool = True):
 #     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
@@ -245,7 +240,7 @@ class Block(nn.Cell):
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
         super().__init__()
-#         stxx()
+
         self.norm1 = norm_layer((dim,))
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
@@ -255,9 +250,9 @@ class Block(nn.Cell):
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def construct(self, x):
-        # x = x + self.drop_path(self.attn(self.norm1(x)))
+
         x_res = x
-#         stxx()
+
         x = self.norm1(x)
         x, attn = self.attn(x)
         x = x_res + self.drop_path(x)
@@ -324,13 +319,6 @@ class VisionTransformer(nn.Cell):
                 attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer)
             for i in range(depth)])
 
-        # for i in range(depth):
-        #     self.add_module('trans_block_' + str(i),
-        #                     Block(
-        #                         dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias,
-        #                         drop=drop_rate,
-        #                         attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer)
-        #                     )
 
         self.norm = norm_layer((embed_dim,))
 
@@ -350,32 +338,6 @@ class VisionTransformer(nn.Cell):
         if distilled:
             self.head_dist = nn.Dense(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
 
-#         self.init_weights(weight_init)
-
-#     def init_weights(self, mode=''):
-#         assert mode in ('jax', 'jax_nlhb', 'nlhb', '')
-#         head_bias = -math.log(self.num_classes) if 'nlhb' in mode else 0.
-#         trunc_normal_(self.pos_embed, std=.02)
-#         if self.dist_token is not None:
-#             trunc_normal_(self.dist_token, std=.02)
-#         if mode.startswith('jax'):
-#             # leave cls token as zeros to match jax impl
-#             named_apply(partial(_init_vit_weights, head_bias=head_bias, jax_impl=True), self)
-#         else:
-#             trunc_normal_(self.cls_token, std=.02)
-#             self.apply(_init_vit_weights)
-
-#     def _init_weights(self, m):
-#         # this fn left here for compat with downstream users
-#         _init_vit_weights(m)
-
-
-#     def load_pretrained(self, checkpoint_path, prefix=''):
-#         _load_weights(self, checkpoint_path, prefix)
-
-
-#     def no_weight_decay(self):
-#         return {'pos_embed', 'cls_token', 'dist_token'}
 
     def get_classifier(self):
         if self.dist_token is None:
@@ -478,7 +440,7 @@ class StudentVisionTransformer(nn.Cell):
         self.pos_embed = Parameter(ops.zeros((1, num_patches + self.num_tokens, embed_dim)))
         self.pos_drop = nn.Dropout(p = drop_rate)
         self.depth = depth
-#         stxx()
+
         dpr = [x.value() for x in ops.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
 
         self.blocks = nn.SequentialCell(*[
@@ -487,13 +449,6 @@ class StudentVisionTransformer(nn.Cell):
                 attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer)
             for i in range(depth)])
 
-        # for i in range(depth):
-        #     self.add_module('trans_block_' + str(i),
-        #                     Block(
-        #                         dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias,
-        #                         drop=drop_rate,
-        #                         attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer)
-        #                     )
 
         self.norm = norm_layer((embed_dim,))
 
@@ -513,7 +468,6 @@ class StudentVisionTransformer(nn.Cell):
         if distilled:
             self.head_dist = nn.Dense(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
 
-#         self.init_weights(weight_init)
 
         # prototype
         self.num_cluster = 24 * 3
@@ -545,34 +499,10 @@ class StudentVisionTransformer(nn.Cell):
             nn.ReLU(),
         )
 
-#     def init_weights(self, mode=''):
-#         assert mode in ('jax', 'jax_nlhb', 'nlhb', '')
-#         head_bias = -math.log(self.num_classes) if 'nlhb' in mode else 0.
-#         trunc_normal_(self.pos_embed, std=.02)
-#         if self.dist_token is not None:
-#             trunc_normal_(self.dist_token, std=.02)
-#         if mode.startswith('jax'):
-#             # leave cls token as zeros to match jax impl
-#             named_apply(partial(_init_vit_weights, head_bias=head_bias, jax_impl=True), self)
-#         else:
-#             trunc_normal_(self.cls_token, std=.02)
-#             self.apply(_init_vit_weights)
-
-#     def _init_weights(self, m):
-#         # this fn left here for compat with downstream users
-#         _init_vit_weights(m)
-
-#     def load_pretrained(self, checkpoint_path, prefix=''):
-#         _load_weights(self, checkpoint_path, prefix)
-
-
-#     def no_weight_decay(self):
-#         return {'pos_embed', 'cls_token', 'dist_token'}
 
     def vlad3(self, scene, centroid):
         scene = scene.permute(0, 2, 1).unsqueeze(-1).contiguous()
         x = scene
-#         ipdb.set_trace()
         N, C, W, H = x.shape[0:]
 
         x = F.normalize(x, p=2, dim=1)  # .Size([64, 384, 197, 1])
@@ -609,11 +539,11 @@ class StudentVisionTransformer(nn.Cell):
         :param centroid: .Size([72, 1024])
         :return:.Size([64, 197, 384])
         """
-#         ipdb.set_trace()
+
         xs = xs.permute(0,2,1)#  # .Size([64, 384, 197])
         aug = self.encode3(xs.reshape(xs.shape[0], xs.shape[1], -1))  #.Size([64, 384, 197])  这个encode3 一定要一样么
         new_center = self.encode3(ops.tile(centroid.unsqueeze(0),(xs.shape[0], 1, 1)).permute(0, 2, 1)).permute(0, 2, 1) # .Size([64, 72, 384])
-#         stxx()
+
         align = F.softmax(ops.matmul(new_center, aug), axis=1) # .Size([64, 72, 197])
 
         aug_feature = ops.matmul(new_center.permute(0, 2, 1), align) # .Size([64, 384, 197])
@@ -650,23 +580,19 @@ class StudentVisionTransformer(nn.Cell):
         hiddenlayer_attn = []
 
         for i in range(self.depth):
-#             stxx()
-            # x, attn = eval('self.trans_block_' + str(i))(x)
             x, attn = self.blocks[i](x)
             hiddenlayer_trans.append(x)
             hiddenlayer_attn.append(attn)
 
         # proto3
         if is_Train:
-            # x.shape: .Size([64, 1024, 7, 7])
-            # ipdb.set_trace()
             proto_ipt = ops.cat((new_teacher_convs[0],new_teacher_convs[1],new_teacher_convs[2]), axis=-1)  # .Size([64, 2048, 7, 7])
             proto_ipt = self.cat_transform3(proto_ipt)  # .Size([64, 1024, 7, 7])
             vlad3 = self.vlad3(proto_ipt, self.centroids3)  # .Size([64, 1024, 7, 7])
             vlad3 = self.aug3(vlad3, self.centroids3)
         else:
             vlad3 = self.aug3(x, self.centroids3)
-        # ipdb.set_trace()
+
         vlad3 = self.norm(vlad3)
         x = self.norm(x)
         if self.dist_token is None:
@@ -675,7 +601,6 @@ class StudentVisionTransformer(nn.Cell):
             return x[:, 0], x[:, 1]
 
     def construct(self, x, new_teacher_convs, is_Train):
-#         stxx()
         x, aug_x, hiddenlayer_trans, hiddenlayer_attn = self.forward_features(x, new_teacher_convs, is_Train)
         if self.head_dist is not None:
             x, x_dist = self.head(x[0]), self.head_dist(x[1])  # x must be a tuple
@@ -690,18 +615,15 @@ class StudentVisionTransformer(nn.Cell):
         return x, aug_cls, hiddenlayer_trans, hiddenlayer_attn
 
 
-# @register_model
+
 def deit_base_patch16_224(pretrained=False, **kwargs):
     model = VisionTransformer(
         patch_size=16, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, epsilon=1e-6), **kwargs)
-#     model.default_cfg = _cfg()
     return model
 
-# @register_model
 def student_deit_base_patch16_224_6layer(pretrained=False, **kwargs):
     model = StudentVisionTransformer(
         patch_size=16, embed_dim=768, depth=6, num_heads=12, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, epsilon=1e-6), **kwargs)
-#     model.default_cfg = _cfg()
     return model
